@@ -59,7 +59,7 @@ def train(args):
         shuffle=True,
         num_workers=4,
     )
-    valid_loader=  DataLoader(
+    val_loader = DataLoader(
         valid_dataset,
         batch_size=args.val_batch_size,
         shuffle=True,
@@ -69,7 +69,7 @@ def train(args):
     # Create Model
     model_module = getattr(import_module('MaskModules.model'), args.model)
     model = model_module(num_classes=18)
-    
+
     # Set Device
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -78,15 +78,16 @@ def train(args):
 
     # Set Optimizer & Loss
     criterion = nn.CrossEntropyLoss()
-    optim = Adam(model.parameters(), lr=lr)
+    optimizer = Adam(model.parameters(), lr=lr)
     
     max_valid_acc = 0
     min_valid_loss = 100
 
     # Start Training
     print("Start Training...")
-    for i in range(args.epochs):
-        print("Epoch {} start...".format(i))
+    model.to(device)
+    for epoch in range(args.epochs):
+        print("Epoch {} start...".format(epoch))
         model.train()
         loss_value = 0
         matches = 0
@@ -97,14 +98,16 @@ def train(args):
             outputs = model(inputs)
             preds = outputs.argmax(axis=1)
             
-            loss = criterion(outputs, targets.argmax(axis=1))
+            loss = criterion(outputs, targets)
             loss.backward()
             optimizer.step()
 
-            loss_value += loss.item()
-            matches += (preds == labels).sum().item()
+            loss_value = loss.item()
+            matches = (preds == targets).sum().item()
 
-            if (batch_idx + 1) % args.batch_size:
+            if (batch_idx + 1) % args.batch_size == 0:
+                train_loss = loss_value
+                train_acc = matches / args.batch_size
                 print(
                     f"Epoch[{epoch}/{args.epochs}]({batch_idx + 1}/{len(train_loader)}) || "
                     f"training loss {train_loss:4.4} || training accuracy {train_acc:4.2%}"
@@ -120,19 +123,19 @@ def train(args):
             for batch_idx, (inputs, targets) in enumerate(val_loader):
                 inputs, targets = sample["image"].to(device), sample["label"].to(device)
                 outputs = model(inputs)
-                loss = criterion(outputs, targets.argmax(axis=1))
+                loss = criterion(outputs, targets)
                 
                 test_loss += loss.item()
                 predicted = outputs.argmax(axis=1)
                 total += targets.size(0)
-                correct += predicted.eq(targets.argmax(axis=1)).sum().item()
+                correct += predicted.eq(targets).sum().item()
             #TODO: save max valid accuracy model
         print(f'Accuracy of the network on the {total} test images: %d %%' % (100 * correct / total))
     # Create Save Directory
     save_dir_name = "{}_epoch_{}".format(args.model, args.epochs)
     if not os.path.exists(os.path.join(model_dir, save_dir_name)):
         os.mkdir(os.path.join(model_dir, save_dir_name))
-    torch.save(os.path.join(model_dir, save_dir_name, 'best.pth'))
+    torch.save(model, os.path.join(model_dir, save_dir_name, 'best.pth'))
 
 
 if __name__=='__main__':
