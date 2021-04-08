@@ -29,7 +29,29 @@ class ResNet_Model(nn.Module):
 class EfficientNet_Model(nn.Module):
     def __init__(self, num_classes: int=1000):
         super(EfficientNet_Model, self).__init__()
-        self.model = EfficientNet.from_pretrained('efficientnet-b4')
+        model = EfficientNet.from_pretrained('efficientnet-b4')
+        in_features = model._fc.in_features
+        model._fc = nn.Sequential(nn.Linear(in_features, 512),
+                                 nn.ReLU(),
+                                 nn.Dropout(0.2),
+                                 nn.Linear(512, num_classes)
+                                 )
+        self.model = model
+    
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.model(x)
+
+class EfficientNet_B2_Model(nn.Module):
+    def __init__(self, num_classes: int=1000):
+        super(EfficientNet_B2_Model, self).__init__()
+        model = EfficientNet.from_pretrained('efficientnet-b2')
+        in_features = model._fc.in_features
+        model._fc = nn.Sequential(nn.Linear(in_features, 512),
+                                 nn.ReLU(),
+                                 nn.Dropout(0.2),
+                                 nn.Linear(512, num_classes)
+                                 )
+        self.model = model
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)

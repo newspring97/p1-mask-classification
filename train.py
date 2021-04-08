@@ -37,11 +37,7 @@ def train(args):
         os.mkdir(model_dir)
 
     # Transformation: Resize & Normalize
-    transform = transforms.Compose([
-        transforms.Resize((224, 224), Image.BILINEAR),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.2, 0.2, 0.2)),
-    ])
+    transform = getattr(import_module("MaskModules.transform"), args.augmentation)()
 
     # Create Train & Validation Dataset (Train : Validation = 9 : 1)
     img_paths = glob.glob(os.path.join(data_dir, '*'))
@@ -80,8 +76,13 @@ def train(args):
     criterion = nn.CrossEntropyLoss()
     optimizer = Adam(model.parameters(), lr=lr)
     
-    max_valid_acc = 0
+    #max_valid_acc = 0
     min_valid_loss = 100
+
+    # Create Save Directory
+    save_dir_name = "{}_epoch_{}".format(args.model, args.epochs)
+    if not os.path.exists(os.path.join(model_dir, save_dir_name)):
+        os.mkdir(os.path.join(model_dir, save_dir_name))
 
     # Start Training
     print("Start Training...")
@@ -131,11 +132,12 @@ def train(args):
                 correct += predicted.eq(targets).sum().item()
             #TODO: save max valid accuracy model
         print(f'Accuracy of the network on the {total} test images: %d %%' % (100 * correct / total))
-    # Create Save Directory
-    save_dir_name = "{}_epoch_{}".format(args.model, args.epochs)
-    if not os.path.exists(os.path.join(model_dir, save_dir_name)):
-        os.mkdir(os.path.join(model_dir, save_dir_name))
-    torch.save(model, os.path.join(model_dir, save_dir_name, 'best.pth'))
+        print("Test loss: {}".format(test_loss))
+
+        if min_valid_loss > test_loss:
+            torch.save(model, os.path.join(model_dir, save_dir_name, 'best.pth'))
+            print("Save model on epoch {}".format(epoch))
+    
 
 
 if __name__=='__main__':
@@ -146,7 +148,7 @@ if __name__=='__main__':
     parser.add_argument('--data_dir', type=str, default='/opt/ml/input/data/train/images/', help='directory to save model')
     parser.add_argument('--model', type=str, default='ResNet_Model', help='train model (default: ResNet_Model)')
     parser.add_argument('--epochs', type=int, default=20, help='epochs (default: 20)')
-    parser.add_argument('--augmentation', type=str, default=None) #TODO
+    parser.add_argument('--augmentation', type=str, default='BaseAugmentation')
     parser.add_argument('--batch_size', type=int, default=32, help='number of batch (default: 32)')
     parser.add_argument('--val_batch_size', type=int, default=32, help='number of validation batch (default: 32)')
 
