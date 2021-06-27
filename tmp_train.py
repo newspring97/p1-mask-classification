@@ -83,13 +83,14 @@ def train(args):
     save_dir_name = "{}_epoch_{}".format(args.model, args.epochs)
     if not os.path.exists(os.path.join(model_dir, save_dir_name)):
         os.mkdir(os.path.join(model_dir, save_dir_name))
-
+        
     # Start Training
     print("Start Training...")
     model.to(device)
+    model.train()
     for epoch in range(args.epochs):
         print("Epoch {} start...".format(epoch))
-        model.train()
+        
         loss_value = 0
         matches = 0
         for batch_idx, sample in enumerate(train_loader):

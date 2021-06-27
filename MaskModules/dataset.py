@@ -24,7 +24,7 @@ class MaskDataset:
             if gender_str == "female":
                 sex = 1
 
-            if int(age_str) >= 60:
+            if int(age_str) >= 59:
                 age = 2
             elif int(age_str) >= 30:
                 age = 1
